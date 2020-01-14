@@ -12,6 +12,51 @@ class ScreenBrightness extends StatefulWidget {
   static const EventChannel _eventChannel =
       const EventChannel('${CHANNEL}_event');
 
+  /// Stream订阅
+  static StreamSubscription _subscription;
+  /// 监听事件
+  static Map<int, Function> _events = {};
+
+  /// event channel回调
+  static void _onEvent(Object event) {
+    _events.values.forEach((item) {
+      if (item != null) {
+        item(event);
+      }
+    });
+  }
+
+  /// event channel回调失败
+  static void _onError(Object error) {
+    print('Brightness status: unknown.' + error.toString());
+  }
+
+  /// 添加监听器
+  /// 返回id, 用于删除监听器使用
+  static int addListener(Function onEvent) {
+    if (_subscription == null) {
+      //event channel 注册
+      _subscription = _eventChannel
+          .receiveBroadcastStream('init')
+          .listen(_onEvent, onError: _onError);
+    }
+    if (onEvent != null) {
+      _events[onEvent.hashCode] = onEvent;
+      brightness.then((value) {
+        onEvent(value);
+      });
+      return onEvent.hashCode;
+    }
+    return null;
+  }
+
+  /// 删除监听器
+  static void removeListener(int id) {
+    if (id != null) {
+      _events.remove(id);
+    }
+  }
+
   /// 获取屏幕亮度
   static Future<double> get brightness async {
     return await _channel.invokeMethod('getBrightness');
@@ -55,36 +100,19 @@ class ScreenBrightness extends StatefulWidget {
 }
 
 class ScreenBrightnessState extends State<ScreenBrightness> {
-  /// Stream订阅
-  StreamSubscription _subscription;
+  int _listenerId;
 
   @override
   void initState() {
     super.initState();
     // 注册Steam事件
-    _subscription = ScreenBrightness._eventChannel
-        .receiveBroadcastStream("init")
-        .listen(_onEvent, onError: _onError);
+    _listenerId = ScreenBrightness.addListener(widget.onBrightnessChange);
   }
 
   @override
   void dispose() {
+    ScreenBrightness.removeListener(_listenerId);
     super.dispose();
-    _subscription?.cancel();
-  }
-
-  /// event channel回调
-  void _onEvent(Object event) {
-    if (mounted) {
-      if (widget.onBrightnessChange != null) {
-        widget.onBrightnessChange(event);
-      }
-    }
-  }
-
-  /// event channel回调失败
-  void _onError(Object error) {
-    print('Screen brightness: unknown.' + error.toString());
   }
 
   @override

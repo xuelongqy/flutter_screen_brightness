@@ -82,7 +82,7 @@ class FlutterScreenBrightnessPlugin: FlutterPlugin, MethodCallHandler, EventChan
     if (BuildConfig.DEBUG) {
       Log.d(TAG, "initBrightness = $initBrightness")
     }
-    this.eventSink?.success(initBrightness)
+    //this.eventSink?.success(initBrightness)
   }
 
   /**
